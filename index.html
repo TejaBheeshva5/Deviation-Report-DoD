@@ -149,7 +149,7 @@
     </div>
     <div class="masthead-meta">
       <span class="stamp" id="modeStamp">Sample Data</span><br>
-      Generated <span id="genDate"></span>
+      Last Refreshed <span id="genDate"></span>
     </div>
   </div>
   <div class="ledger-lines"></div>
@@ -293,7 +293,7 @@
   }
   function hideTooltip(){ tooltipEl.classList.remove('visible'); }
 
-  document.getElementById('genDate').textContent = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+  // genDate is populated by updateTimestamp() once data actually loads (see bottom of file)
 
   // ---------- Sample dataset (rows + daily, same shape the real backend returns) ----------
   function generateSampleDataset(){
@@ -1076,22 +1076,47 @@
     el.className = 'status-line' + (kind ? ' ' + kind : '');
   }
 
-  document.getElementById('demoBtn').addEventListener('click', () => {
-    render(generateSampleDataset(), false);
-    setStatus('Showing sample data. Paste your Web App URL above and click Connect for live figures.');
-  });
+  // ---------- Auto-connect on page load ----------
+  // Fill this in with your deployed Apps Script Web App URL so the dashboard
+  // loads live data automatically for anyone who opens the page — no manual
+  // paste-and-connect step needed. Leave it as the placeholder string to fall
+  // back to sample data (useful for local development/testing this file).
+  // NOTE: this URL becomes visible to anyone who views this page's source —
+  // that's fine as long as your Apps Script deployment's access is already
+  // restricted to "Anyone within your organization", since Google's own login
+  // still gates the actual data. Don't rely on this URL being secret.
+  const DEFAULT_WEB_APP_URL = 'https://script.google.com/a/macros/paytm.com/s/AKfycbyTQb7YMBTujSrWiyrm19GVp4iYAIC5kEgN44DVQ_LM7DM-IXYNrlo9p49pya1ltFK6/exec';
+  // How often to silently re-pull live data while the tab stays open (ms).
+  // Set to 0 to disable auto-refresh entirely.
+  const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
-  document.getElementById('connectBtn').addEventListener('click', async () => {
-    const url = document.getElementById('webAppUrl').value.trim();
-    if (!url){ setStatus('Enter your Apps Script Web App URL first.', 'error'); return; }
-    setStatus('Connecting…');
+  function updateTimestamp(){
+    document.getElementById('genDate').textContent = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) + ' IST';
+  }
+
+  async function connectToUrl(url, silent){
+    if (!url){ setStatus('Enter your Apps Script Web App URL first.', 'error'); return false; }
+    if (!silent) setStatus('Connecting…');
     try {
       const dataset = await loadLive(url);
       render(dataset, true);
+      updateTimestamp();
       setStatus('Connected — showing live data from your spreadsheets.', 'ok');
+      return true;
     } catch (err){
       setStatus('Could not load live data: ' + err.message, 'error');
+      return false;
     }
+  }
+
+  document.getElementById('demoBtn').addEventListener('click', () => {
+    render(generateSampleDataset(), false);
+    updateTimestamp();
+    setStatus('Showing sample data. Paste a Web App URL above and click Connect for live figures.');
+  });
+
+  document.getElementById('connectBtn').addEventListener('click', () => {
+    connectToUrl(document.getElementById('webAppUrl').value.trim(), false);
   });
 
   document.getElementById('filterDate').addEventListener('change', (e) => { filters.date = e.target.value; applyFiltersAndRender(); });
@@ -1105,7 +1130,18 @@
     applyFiltersAndRender();
   });
 
-  render(generateSampleDataset(), false);
+  const hasDefaultUrl = DEFAULT_WEB_APP_URL && !DEFAULT_WEB_APP_URL.includes('PASTE_');
+  if (hasDefaultUrl) {
+    document.getElementById('webAppUrl').value = DEFAULT_WEB_APP_URL;
+    render(generateSampleDataset(), false); // instant paint while the live fetch is in flight
+    connectToUrl(DEFAULT_WEB_APP_URL, true);
+    if (AUTO_REFRESH_MS > 0) {
+      setInterval(() => connectToUrl(DEFAULT_WEB_APP_URL, true), AUTO_REFRESH_MS);
+    }
+  } else {
+    render(generateSampleDataset(), false);
+    updateTimestamp();
+  }
 })();
 </script>
 </body>
