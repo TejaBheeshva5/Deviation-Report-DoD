@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>COD SPOC — Daily Revenue Statement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EDEAE0;
+    --paper-raised: #F5F3EA;
+    --ink: #1E2A25;
+    --ink-soft: #536057;
+    --ink-faint: #8B9389;
+    --rule: #C9C2AE;
+    --rule-strong: #A8A08A;
+    --credit: #2F6F4F;
+    --credit-soft: #E4EDE6;
+    --debit: #8B3A3A;
+    --debit-soft: #F1E4E0;
+    --gold: #A67C3D;
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection{ background: var(--gold); color: var(--paper); }
+  .sheet{ max-width: 1140px; margin: 0 auto; padding: 48px 28px 80px; }
+
+  .masthead{ display:flex; justify-content:space-between; align-items:flex-end; border-bottom: 2px solid var(--ink); padding-bottom: 18px; margin-bottom: 6px; flex-wrap: wrap; gap: 16px; }
+  .masthead-title{ font-family: 'Fraunces', serif; font-optical-sizing: auto; font-weight: 600; font-size: clamp(28px, 4vw, 40px); letter-spacing: -0.01em; margin: 0; }
+  .masthead-sub{ font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-soft); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; }
+  .masthead-meta{ font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-soft); text-align: right; line-height: 1.6; }
+  .masthead-meta .stamp{ display:inline-block; border: 1px solid var(--gold); color: var(--gold); padding: 2px 8px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 2px; }
+  .ledger-lines{ height: 10px; background-image: repeating-linear-gradient(180deg, var(--rule) 0, var(--rule) 1px, transparent 1px, transparent 10px); margin-bottom: 28px; opacity: 0.5; }
+
+  .config-bar{ background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 4px; padding: 14px 16px; margin-bottom: 16px; display:flex; gap: 10px; align-items:center; flex-wrap: wrap; }
+  .config-bar label{ font-family:'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); white-space: nowrap; }
+  .config-bar input[type=text]{ flex: 1 1 320px; min-width: 220px; font-family:'IBM Plex Mono', monospace; font-size: 12px; padding: 9px 10px; border: 1px solid var(--rule-strong); border-radius: 3px; background: #fff; color: var(--ink); }
+  .config-bar input[type=text]:focus{ outline: 2px solid var(--gold); outline-offset: 1px; }
+  .btn{ font-family:'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 9px 16px; border-radius: 3px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; transition: transform 0.08s ease, opacity 0.15s ease; }
+  .btn:hover{ opacity: 0.85; }
+  .btn:active{ transform: translateY(1px); }
+  .btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .btn.secondary{ background: transparent; color: var(--ink); }
+  .status-line{ font-family:'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-faint); width: 100%; margin-top: 2px; }
+  .status-line.error{ color: var(--debit); }
+  .status-line.ok{ color: var(--credit); }
+
+  .filter-bar{ background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 4px; padding: 14px 16px; margin-bottom: 32px; display:flex; gap: 14px; align-items:center; flex-wrap: wrap; }
+  .filter-field{ display:flex; flex-direction:column; gap: 4px; }
+  .filter-field label{ font-family:'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+  .filter-field select{ font-family:'IBM Plex Mono', monospace; font-size: 12px; padding: 7px 8px; border: 1px solid var(--rule-strong); border-radius: 3px; background: #fff; color: var(--ink); min-width: 190px; }
+  .filter-field select:focus{ outline: 2px solid var(--gold); outline-offset: 1px; }
+
+  .ledger-row-label{ font-family:'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); margin: 0 0 12px; display:flex; align-items:center; gap: 10px; }
+  .ledger-row-label::after{ content:''; flex:1; height:1px; background: var(--rule); }
+
+  .summary-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 40px; }
+  @media (max-width: 900px){ .summary-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px){ .summary-grid{ grid-template-columns: 1fr; } }
+  .card{ background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 4px; padding: 18px 18px 14px; position: relative; overflow: hidden; }
+  .card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width: 3px; background: var(--credit); }
+  .card.is-debit::before{ background: var(--debit); }
+  .card-name{ font-family:'Fraunces', serif; font-weight: 600; font-size: 16px; }
+  .card-tag{ font-family:'IBM Plex Mono', monospace; font-size: 10px; color: var(--ink-faint); text-transform: uppercase; }
+  .card-total{ font-family:'IBM Plex Mono', monospace; font-weight: 600; font-size: 26px; margin: 10px 0 2px; font-variant-numeric: tabular-nums; }
+  .card-sub{ font-family:'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); }
+  .card-sub.good{ color: var(--credit); }
+  .card-sub.bad{ color: var(--debit); }
+  .card svg.spark{ display:block; margin-top: 10px; width: 100%; height: 36px; }
+
+  .chart-section{ background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 4px; padding: 22px 22px 16px; margin-bottom: 32px; }
+  .chart-head{ display:flex; justify-content:space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chart-title{ font-family:'Fraunces', serif; font-weight: 600; font-size: 19px; }
+  .chart-desc{ font-family:'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-faint); margin: -8px 0 14px; line-height: 1.5; }
+  .legend-chip{ display:inline-flex; align-items:center; gap: 6px; font-family:'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); margin-left: 14px; }
+  .legend-dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .chart-svg-wrap{ width:100%; overflow-x:auto; }
+  .chart-svg-wrap svg{ display:block; min-width: 560px; }
+  .stat-chips{ display:flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat-chip{ background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 8px 12px; font-family:'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); }
+  .stat-chip b{ color: var(--ink); font-size: 13px; }
+  .stat-chip.good b{ color: var(--credit); }
+  .stat-chip.bad b{ color: var(--debit); }
+
+  .ledger-table-wrap{ background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; margin-bottom: 32px; }
+  table.ledger{ width: 100%; border-collapse: collapse; font-family:'IBM Plex Mono', monospace; font-size: 12.5px; }
+  table.ledger thead th{ text-align: right; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 10.5px; color: var(--ink-soft); padding: 12px 14px; border-bottom: 2px solid var(--ink); background: var(--paper); position: sticky; top:0; }
+  table.ledger thead th:first-child{ text-align: left; }
+  table.ledger td{ padding: 8px 14px; text-align: right; font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  table.ledger td:first-child{ text-align:left; color: var(--ink-soft); font-weight: 500; }
+  table.ledger tbody tr:nth-child(5n){ background: rgba(166,124,61,0.06); }
+  table.ledger tbody tr:hover{ background: var(--credit-soft); }
+  table.ledger .good{ color: var(--credit); font-weight:600; }
+  table.ledger .bad{ color: var(--debit); font-weight:600; }
+  table.ledger .neu{ color: var(--ink-faint); }
+  table.ledger tfoot td{ border-top: 2px solid var(--ink); border-bottom: none; font-weight: 600; padding-top: 12px; padding-bottom: 12px; }
+  table.ledger tbody tr.bad-row{ background: rgba(181,84,63,0.07); }
+  table.ledger tbody tr.bad-row:hover{ background: rgba(181,84,63,0.14); }
+  table.ledger tbody tr.top-rank{ background: rgba(166,124,61,0.12); }
+  table.ledger tbody tr.top-rank:hover{ background: rgba(166,124,61,0.2); }
+  table.ledger .rank-badge{ display:inline-block; min-width:18px; text-align:center; font-weight:600; }
+  table.ledger tr.top-rank .rank-badge{ color: var(--gold); }
+  table.ledger tr.expandable{ cursor: pointer; }
+  table.ledger tr.expandable:hover{ background: var(--credit-soft); }
+  table.ledger .expand-icon{ display:inline-block; width:14px; color: var(--gold); font-size: 10px; }
+  table.ledger tr.sub-row td{ background: rgba(61,107,132,0.04); }
+  table.ledger tr.adv-row td{ font-size: 12px; }
+  table.ledger tr.date-row td{ background: rgba(61,107,132,0.02); font-size: 11.5px; color: var(--ink-soft); }
+  table.ledger tr.adv-row.expandable:hover td{ background: var(--credit-soft); }
+  table.ledger td.indent-1{ padding-left: 34px; }
+  table.ledger td.indent-2{ padding-left: 56px; }
+  .table-scroll{ max-height: 420px; overflow-y: auto; overflow-x: auto; }
+  .empty-note{ padding: 18px 16px; font-family:'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-faint); }
+
+  .footnote{ font-family:'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-faint); margin-top: 14px; line-height: 1.6; }
+
+  .chart-tooltip{
+    position: fixed; pointer-events: none; background: var(--ink); color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 10px 13px; border-radius: 4px;
+    line-height: 1.65; z-index: 1000; opacity: 0; transition: opacity 0.08s ease; max-width: 270px;
+    box-shadow: 0 6px 18px rgba(30,42,37,0.3); white-space: nowrap;
+  }
+  .chart-tooltip.visible{ opacity: 1; }
+  .chart-tooltip .tt-date{ color: var(--gold); font-weight: 600; margin-bottom: 4px; display:block; }
+  .chart-tooltip .tt-row{ display:flex; justify-content:space-between; gap: 16px; }
+  .chart-tooltip .tt-total{ margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(245,243,234,0.25); font-weight: 600; }
+  .chart-svg-wrap{ cursor: crosshair; }
+  .chart-svg-wrap svg rect[data-idx]{ transition: opacity 0.1s ease; }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="chart-tooltip" id="chartTooltip"></div>
+<div class="sheet">
+
+  <div class="masthead">
+    <div>
+      <p class="masthead-title">COD SPOC Revenue</p>
+      <p class="masthead-sub">Daily Statement · System / Video / DRR</p>
+    </div>
+    <div class="masthead-meta">
+      <span class="stamp" id="modeStamp">Sample Data</span><br>
+      Generated <span id="genDate"></span>
+    </div>
+  </div>
+  <div class="ledger-lines"></div>
+
+  <div class="config-bar">
+    <label for="webAppUrl">Web App URL</label>
+    <input type="text" id="webAppUrl" placeholder="Paste your Apps Script deployment URL to connect live data…" />
+    <button class="btn" id="connectBtn">Connect</button>
+    <button class="btn secondary" id="demoBtn">Reload Sample</button>
+    <div class="status-line" id="statusLine">Showing sample data. Paste your Web App URL above and click Connect for live figures.</div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-field">
+      <label for="filterDate">Date</label>
+      <select id="filterDate"><option value="ALL">All Dates</option></select>
+    </div>
+    <div class="filter-field">
+      <label for="filterCodSpoc">COD SPOC</label>
+      <select id="filterCodSpoc"><option value="ALL">All COD SPOCs</option></select>
+    </div>
+    <div class="filter-field">
+      <label for="filterAdvertiser">Advertiser</label>
+      <select id="filterAdvertiser"><option value="ALL">All Advertisers</option></select>
+    </div>
+    <button class="btn secondary" id="resetFiltersBtn" style="align-self:flex-end;">Reset</button>
+  </div>
+
+  <p class="ledger-row-label" id="summaryLabel">Latest Day With DRR Above ₹10L</p>
+  <div class="summary-grid" id="summaryGrid"></div>
+
+  <div class="chart-section">
+    <div class="chart-head">
+      <span class="chart-title">Daily Revenue Trend</span>
+      <div>
+        <span class="legend-chip"><span class="legend-dot" style="background:#3D6B84"></span>System + Video</span>
+        <span class="legend-chip"><span class="legend-dot" style="background:#3E8161"></span>DRR (within ±15%)</span>
+        <span class="legend-chip"><span class="legend-dot" style="background:#B5543F"></span>DRR (outside ±15%)</span>
+      </div>
+    </div>
+    <p class="chart-desc">DRR bar color shows that day's deviation status at a glance. Hover any day for the full breakdown.</p>
+    <div class="chart-svg-wrap" id="trendChartWrap"></div>
+  </div>
+
+  <div class="chart-section">
+    <div class="chart-head">
+      <span class="chart-title">Deviation — DRR vs (System + Video)</span>
+    </div>
+    <p class="chart-desc">Deviation % = (DRR − (System + Video)) ÷ (System + Video), per day. Green = within ±15%, red = outside. Dashed gold line = 7-day rolling average, to spot a sustained drift rather than daily noise. Hover a bar for the exact figures.</p>
+    <div class="stat-chips" id="deviationStats"></div>
+    <div class="chart-svg-wrap" id="deviationChartWrap"></div>
+  </div>
+
+  <p class="ledger-row-label" style="margin-top:36px;">Date Level</p>
+  <div class="ledger-table-wrap">
+    <div class="table-scroll">
+      <table class="ledger" id="dateTable">
+        <thead>
+          <tr><th>Date</th><th>System</th><th>Video</th><th>Sys + Video</th><th>DRR</th><th>Deviation %</th></tr>
+        </thead>
+        <tbody id="dateTableBody"></tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td id="dtSystem">—</td><td id="dtVideo">—</td><td id="dtCombined">—</td><td id="dtDrr">—</td><td id="dtDev">—</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <p class="ledger-row-label" id="advertiserLabel">Advertiser Level — Ranked By |Deviation|</p>
+  <p class="footnote" id="advertiserFootnote" style="margin-top:-8px; margin-bottom:14px;">Mapped via DRR's <code>Advertiser Name (Ad Manager)</code> ↔ System/Video's <code>advertiser_name</code>. Biggest reconciliation gaps surface first — pick a single date above to rank that day specifically.</p>
+  <div class="ledger-table-wrap">
+    <div class="table-scroll">
+      <table class="ledger" id="advertiserTable">
+        <thead>
+          <tr><th>#</th><th>Advertiser</th><th>COD SPOC</th><th>System</th><th>Video</th><th>Sys + Video</th><th>DRR</th><th>Deviation %</th></tr>
+        </thead>
+        <tbody id="advertiserTableBody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3">Total</td>
+            <td id="atSystem">—</td><td id="atVideo">—</td><td id="atCombined">—</td><td id="atDrr">—</td><td id="atDev">—</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <p class="ledger-row-label" id="codSpocLabel">COD SPOC Level — Ranked By |Deviation|</p>
+  <p class="footnote" id="codSpocFootnote" style="margin-top:-8px; margin-bottom:14px;">Grouped by DRR's <code>COD SPOC</code> column. Advertisers seen in System/Video but missing from DRR's advertiser list land under "Unmapped". The top 3 are highlighted.</p>
+  <div class="ledger-table-wrap">
+    <div class="table-scroll">
+      <table class="ledger" id="codSpocTable">
+        <thead>
+          <tr><th>#</th><th>COD SPOC</th><th>System</th><th>Video</th><th>Sys + Video</th><th>DRR</th><th>Deviation %</th></tr>
+        </thead>
+        <tbody id="codSpocTableBody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">Total</td>
+            <td id="ctSystem">—</td><td id="ctVideo">—</td><td id="ctCombined">—</td><td id="ctDrr">—</td><td id="ctDev">—</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <p class="footnote">Deviation % = (DRR − (System + Video)) ÷ |System + Video|, expressed as a percentage. Green = between −15% and +15%; red = outside that band.</p>
+
+</div>
+
+<script>
+(function(){
+  const fmt = (n) => '₹' + Number(n||0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const fmtShort = (n) => {
+    const v = Number(n||0);
+    if (Math.abs(v) >= 100000) return '₹' + (v/100000).toFixed(1) + 'L';
+    return '₹' + v.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  };
+  const shortDate = (d) => new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
+  const longDate = (d) => new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric', weekday:'short' });
+  const TEN_LAKH = 1000000;
+  const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  // ---------- Shared chart tooltip ----------
+  const tooltipEl = document.getElementById('chartTooltip');
+  function showTooltip(clientX, clientY, html){
+    tooltipEl.innerHTML = html;
+    tooltipEl.classList.add('visible');
+    const pad = 16;
+    let left = clientX + pad, top = clientY + pad;
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = top + 'px';
+    requestAnimationFrame(() => {
+      const rect = tooltipEl.getBoundingClientRect();
+      if (rect.right > window.innerWidth) tooltipEl.style.left = Math.max(4, clientX - rect.width - pad) + 'px';
+      if (rect.bottom > window.innerHeight) tooltipEl.style.top = Math.max(4, clientY - rect.height - pad) + 'px';
+    });
+  }
+  function hideTooltip(){ tooltipEl.classList.remove('visible'); }
+
+  document.getElementById('genDate').textContent = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+
+  // ---------- Sample dataset (rows + daily, same shape the real backend returns) ----------
+  function generateSampleDataset(){
+    const advertisers = ['Brand Alpha','Brand Beta','Brand Gamma','Brand Delta','Brand Epsilon','Brand Zeta','Brand Theta'];
+    const codSpocOf = {
+      'Brand Alpha':'Rahul Sharma','Brand Beta':'Rahul Sharma',
+      'Brand Gamma':'Priya Singh','Brand Delta':'Priya Singh',
+      'Brand Epsilon':'Amit Verma','Brand Zeta':'Amit Verma','Brand Theta':'Amit Verma'
+    };
+    const baseRevenue = { 'Brand Alpha':180000,'Brand Beta':95000,'Brand Gamma':240000,'Brand Delta':60000,'Brand Epsilon':310000,'Brand Zeta':40000,'Brand Theta':22000 };
+
+    const days = 30;
+    const today = new Date();
+    const dateList = [];
+    for (let i = days-1; i>=0; i--){ const d = new Date(today); d.setDate(d.getDate()-i); dateList.push(d); }
+
+    const systemRows = [], videoRows = [];
+    const drrRowByAdvertiser = {};
+    advertisers.forEach(name => {
+      drrRowByAdvertiser[name] = { 'Advertiser Name (Ad Manager)': name, 'COD SPOC': codSpocOf[name], 'Product List': '1P' };
+    });
+
+    dateList.forEach((d, i) => {
+      const iso = d.toISOString();
+      const dayKey = d.toISOString().slice(0,10);
+      const dow = d.getDay();
+      const weekendFactor = (dow===0||dow===6) ? 0.7 : 1;
+      advertisers.forEach(name => {
+        const base = baseRevenue[name];
+        const wobble = 1 + Math.sin((i + name.length) / 3) * 0.15 + (Math.random()-0.5)*0.12;
+        const sysShare = 0.55 + Math.random()*0.1;
+        const totalDayRev = Math.max(0, base * wobble * weekendFactor);
+        const sysRev = Math.round(totalDayRev * sysShare);
+        const vidRev = Math.round(totalDayRev * (1-sysShare));
+        systemRows.push({ Date: iso, advertiser_name: name, Ads_Revenue: sysRev });
+        videoRows.push({ dt: iso, advertiser_name: name, budget_spent: vidRev });
+
+        const combined = sysRev + vidRev;
+        const isOutlier = Math.random() < 0.12;
+        const devPct = isOutlier ? (Math.random()<0.5 ? -1:1) * (18 + Math.random()*20) : (Math.random()-0.5) * 20;
+        const drrRev = Math.round(combined * (1 + devPct/100));
+        drrRowByAdvertiser[name][dayKey] = drrRev;
+      });
+    });
+
+    const drrRows = Object.values(drrRowByAdvertiser);
+    return { system: { rows: systemRows }, video: { rows: videoRows }, drr: { rows: drrRows } };
+  }
+
+  // ---------- JSONP loader for the real backend ----------
+  function jsonp(baseUrl, sheetName){
+    return new Promise((resolve, reject) => {
+      const cbName = 'codSpocCb_' + sheetName + '_' + Date.now();
+      const script = document.createElement('script');
+      const cleanup = () => { delete window[cbName]; script.remove(); };
+      window[cbName] = (data) => { cleanup(); resolve(data); };
+      script.onerror = () => { cleanup(); reject(new Error('Network error loading ' + sheetName)); };
+      const sep = baseUrl.includes('?') ? '&' : '?';
+      script.src = baseUrl + sep + 'sheet=' + encodeURIComponent(sheetName) + '&callback=' + cbName;
+      document.body.appendChild(script);
+      setTimeout(() => { if (window[cbName]) { cleanup(); reject(new Error('Timed out loading ' + sheetName)); } }, 15000);
+    });
+  }
+  async function loadLive(baseUrl){
+    const [system, video, drr] = await Promise.all([
+      jsonp(baseUrl, 'system'), jsonp(baseUrl, 'video'), jsonp(baseUrl, 'drr')
+    ]);
+    [system, video, drr].forEach(r => { if (r.status !== 'ok') throw new Error(r.message || 'Backend returned an error'); });
+    return { system, video, drr };
+  }
+
+  // ---------- Shared helpers ----------
+  function deviationPct(drrVal, sysVal, vidVal){
+    const combined = sysVal + vidVal;
+    if (combined === 0) return (drrVal === 0) ? 0 : 100;
+    return ((drrVal - combined) / Math.abs(combined)) * 100;
+  }
+  function withinTolerance(pct){ return Math.abs(pct) <= 15; }
+  function devClass(pct){ return withinTolerance(pct) ? 'good' : 'bad'; }
+  function devCell(pct){
+    const arrow = pct > 0 ? '△' : (pct < 0 ? '▽' : '—');
+    return `<span class="${devClass(pct)}">${arrow} ${pct>=0?'+':''}${pct.toFixed(1)}%</span>`;
+  }
+  function sumDateKeyedFields(row, dateFilter){
+    let total = 0;
+    Object.keys(row).forEach(k => {
+      if (!DATE_KEY_RE.test(k)) return;
+      if (dateFilter !== 'ALL' && k !== dateFilter) return;
+      total += (parseFloat(row[k]) || 0);
+    });
+    return total;
+  }
+  function buildAdvToCodSpoc(drrRows){
+    const map = {};
+    (drrRows || []).forEach(r => {
+      const name = String(r['Advertiser Name (Ad Manager)'] || '').trim();
+      if (name && !map[name]) map[name] = String(r['COD SPOC'] || '(unassigned)').trim();
+    });
+    return map;
+  }
+  function getAllDates(dataset){
+    const set = new Set();
+    (dataset.system.rows || []).forEach(r => set.add(String(r.Date).slice(0,10)));
+    (dataset.video.rows || []).forEach(r => set.add(String(r.dt).slice(0,10)));
+    (dataset.drr.rows || []).forEach(r => Object.keys(r).forEach(k => { if (DATE_KEY_RE.test(k)) set.add(k); }));
+    return Array.from(set).sort();
+  }
+
+  // ---------- State ----------
+  let lastDataset = null;
+  let advToCodSpoc = {};
+  let codSpocToAdvertisers = {};
+  const filters = { date: 'ALL', codSpoc: 'ALL', advertiser: 'ALL' };
+  const expandedCodSpocs = new Set();
+  const expandedAdvertisers = new Set(); // keyed 'codSpoc||advertiserName'
+
+  function esc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function advPasses(name){
+    if (filters.advertiser !== 'ALL' && name !== filters.advertiser) return false;
+    if (filters.codSpoc !== 'ALL') {
+      const cod = advToCodSpoc[name] || 'Unmapped';
+      if (cod !== filters.codSpoc) return false;
+    }
+    return true;
+  }
+
+  // Recomputes date-level series (System/Video/DRR daily totals) honoring all active filters
+  function computeFilteredDaily(dataset){
+    const allDates = getAllDates(dataset);
+    const dates = filters.date === 'ALL' ? allDates : allDates.filter(d => d === filters.date);
+
+    const sysMap = {}, vidMap = {}, drrMap = {};
+    (dataset.system.rows || []).forEach(r => {
+      const name = String(r.advertiser_name || '').trim();
+      if (!advPasses(name)) return;
+      const dayKey = String(r.Date).slice(0,10);
+      if (filters.date !== 'ALL' && dayKey !== filters.date) return;
+      sysMap[dayKey] = (sysMap[dayKey] || 0) + (parseFloat(r.Ads_Revenue) || 0);
+    });
+    (dataset.video.rows || []).forEach(r => {
+      const name = String(r.advertiser_name || '').trim();
+      if (!advPasses(name)) return;
+      const dayKey = String(r.dt).slice(0,10);
+      if (filters.date !== 'ALL' && dayKey !== filters.date) return;
+      vidMap[dayKey] = (vidMap[dayKey] || 0) + (parseFloat(r.budget_spent) || 0);
+    });
+    (dataset.drr.rows || []).forEach(r => {
+      const name = String(r['Advertiser Name (Ad Manager)'] || '').trim();
+      if (!advPasses(name)) return;
+      Object.keys(r).forEach(k => {
+        if (!DATE_KEY_RE.test(k)) return;
+        if (filters.date !== 'ALL' && k !== filters.date) return;
+        drrMap[k] = (drrMap[k] || 0) + (parseFloat(r[k]) || 0);
+      });
+    });
+
+    return {
+      dates,
+      sys: dates.map(d => sysMap[d] || 0),
+      vid: dates.map(d => vidMap[d] || 0),
+      drr: dates.map(d => drrMap[d] || 0)
+    };
+  }
+
+  function buildAdvertiserAggFiltered(dataset){
+    const sysByAdv = {}, vidByAdv = {}, drrByAdv = {};
+    (dataset.system.rows || []).forEach(r => {
+      const name = String(r.advertiser_name || '(blank)').trim();
+      if (!advPasses(name)) return;
+      const dayKey = String(r.Date).slice(0,10);
+      if (filters.date !== 'ALL' && dayKey !== filters.date) return;
+      sysByAdv[name] = (sysByAdv[name] || 0) + (parseFloat(r.Ads_Revenue) || 0);
+    });
+    (dataset.video.rows || []).forEach(r => {
+      const name = String(r.advertiser_name || '(blank)').trim();
+      if (!advPasses(name)) return;
+      const dayKey = String(r.dt).slice(0,10);
+      if (filters.date !== 'ALL' && dayKey !== filters.date) return;
+      vidByAdv[name] = (vidByAdv[name] || 0) + (parseFloat(r.budget_spent) || 0);
+    });
+    (dataset.drr.rows || []).forEach(r => {
+      const name = String(r['Advertiser Name (Ad Manager)'] || '(blank)').trim();
+      if (!advPasses(name)) return;
+      drrByAdv[name] = (drrByAdv[name] || 0) + sumDateKeyedFields(r, filters.date);
+    });
+    const allNames = new Set([...Object.keys(sysByAdv), ...Object.keys(vidByAdv), ...Object.keys(drrByAdv)]);
+    const rows = Array.from(allNames).map(name => {
+      const sysV = sysByAdv[name] || 0, vidV = vidByAdv[name] || 0, drrV = drrByAdv[name] || 0;
+      return { name, codSpoc: advToCodSpoc[name] || 'Unmapped', sys: sysV, vid: vidV, drr: drrV, combined: sysV+vidV, deviation: deviationPct(drrV, sysV, vidV) };
+    });
+    rows.sort((a,b) => Math.abs(b.deviation) - Math.abs(a.deviation));
+    return rows;
+  }
+
+  function buildCodSpocAggFiltered(dataset){
+    const sysByCod = {}, vidByCod = {}, drrByCod = {};
+    const UNMAPPED = 'Unmapped';
+    (dataset.system.rows || []).forEach(r => {
+      const name = String(r.advertiser_name || '(blank)').trim();
+      if (!advPasses(name)) return;
+      const dayKey = String(r.Date).slice(0,10);
+      if (filters.date !== 'ALL' && dayKey !== filters.date) return;
+      const cod = advToCodSpoc[name] || UNMAPPED;
+      sysByCod[cod] = (sysByCod[cod] || 0) + (parseFloat(r.Ads_Revenue) || 0);
+    });
+    (dataset.video.rows || []).forEach(r => {
+      const name = String(r.advertiser_name || '(blank)').trim();
+      if (!advPasses(name)) return;
+      const dayKey = String(r.dt).slice(0,10);
+      if (filters.date !== 'ALL' && dayKey !== filters.date) return;
+      const cod = advToCodSpoc[name] || UNMAPPED;
+      vidByCod[cod] = (vidByCod[cod] || 0) + (parseFloat(r.budget_spent) || 0);
+    });
+    (dataset.drr.rows || []).forEach(r => {
+      const name = String(r['Advertiser Name (Ad Manager)'] || '(blank)').trim();
+      if (!advPasses(name)) return;
+      const cod = String(r['COD SPOC'] || '(unassigned)').trim();
+      drrByCod[cod] = (drrByCod[cod] || 0) + sumDateKeyedFields(r, filters.date);
+    });
+    const allCods = new Set([...Object.keys(sysByCod), ...Object.keys(vidByCod), ...Object.keys(drrByCod)]);
+    const rows = Array.from(allCods).map(cod => {
+      const sysV = sysByCod[cod] || 0, vidV = vidByCod[cod] || 0, drrV = drrByCod[cod] || 0;
+      return { cod, sys: sysV, vid: vidV, drr: drrV, combined: sysV+vidV, deviation: deviationPct(drrV, sysV, vidV) };
+    });
+    rows.sort((a,b) => Math.abs(b.deviation) - Math.abs(a.deviation));
+    return rows;
+  }
+
+  // Advertisers under one specific COD SPOC (ignores the codSpoc/advertiser
+  // filters — that's the whole point of drilling down — but still respects
+  // the active date filter, same as everything else on the page).
+  function getAdvertisersForCodSpoc(dataset, codSpocName){
+    const sysByAdv = {}, vidByAdv = {}, drrByAdv = {};
+    const belongs = (name) => (advToCodSpoc[name] || 'Unmapped') === codSpocName;
+    (dataset.system.rows || []).forEach(r => {
+      const name = String(r.advertiser_name || '(blank)').trim();
+      if (!belongs(name)) return;
+      const dayKey = String(r.Date).slice(0,10);
+      if (filters.date !== 'ALL' && dayKey !== filters.date) return;
+      sysByAdv[name] = (sysByAdv[name] || 0) + (parseFloat(r.Ads_Revenue) || 0);
+    });
+    (dataset.video.rows || []).forEach(r => {
+      const name = String(r.advertiser_name || '(blank)').trim();
+      if (!belongs(name)) return;
+      const dayKey = String(r.dt).slice(0,10);
+      if (filters.date !== 'ALL' && dayKey !== filters.date) return;
+      vidByAdv[name] = (vidByAdv[name] || 0) + (parseFloat(r.budget_spent) || 0);
+    });
+    (dataset.drr.rows || []).forEach(r => {
+      const name = String(r['Advertiser Name (Ad Manager)'] || '(blank)').trim();
+      if (!belongs(name)) return;
+      drrByAdv[name] = (drrByAdv[name] || 0) + sumDateKeyedFields(r, filters.date);
+    });
+    const allNames = new Set([...Object.keys(sysByAdv), ...Object.keys(vidByAdv), ...Object.keys(drrByAdv)]);
+    const rows = Array.from(allNames).map(name => {
+      const sysV = sysByAdv[name] || 0, vidV = vidByAdv[name] || 0, drrV = drrByAdv[name] || 0;
+      return { name, sys: sysV, vid: vidV, drr: drrV, combined: sysV+vidV, deviation: deviationPct(drrV, sysV, vidV) };
+    });
+    rows.sort((a,b) => Math.abs(b.deviation) - Math.abs(a.deviation));
+    return rows;
+  }
+
+  // Day-by-day breakdown for one specific advertiser (still respects the
+  // active date filter — if a single date is selected up top, this simply
+  // confirms that one day; leave the filter on "All Dates" to see the trend).
+  function getDatesForAdvertiser(dataset, advertiserName){
+    const sysMap = {}, vidMap = {}, drrMap = {};
+    (dataset.system.rows || []).forEach(r => {
+      if (String(r.advertiser_name || '').trim() !== advertiserName) return;
+      const dayKey = String(r.Date).slice(0,10);
+      if (filters.date !== 'ALL' && dayKey !== filters.date) return;
+      sysMap[dayKey] = (sysMap[dayKey] || 0) + (parseFloat(r.Ads_Revenue) || 0);
+    });
+    (dataset.video.rows || []).forEach(r => {
+      if (String(r.advertiser_name || '').trim() !== advertiserName) return;
+      const dayKey = String(r.dt).slice(0,10);
+      if (filters.date !== 'ALL' && dayKey !== filters.date) return;
+      vidMap[dayKey] = (vidMap[dayKey] || 0) + (parseFloat(r.budget_spent) || 0);
+    });
+    (dataset.drr.rows || []).forEach(r => {
+      if (String(r['Advertiser Name (Ad Manager)'] || '').trim() !== advertiserName) return;
+      Object.keys(r).forEach(k => {
+        if (!DATE_KEY_RE.test(k)) return;
+        if (filters.date !== 'ALL' && k !== filters.date) return;
+        drrMap[k] = (drrMap[k] || 0) + (parseFloat(r[k]) || 0);
+      });
+    });
+    const allDays = new Set([...Object.keys(sysMap), ...Object.keys(vidMap), ...Object.keys(drrMap)]);
+    return Array.from(allDays).sort().map(d => {
+      const sysV = sysMap[d] || 0, vidV = vidMap[d] || 0, drrV = drrMap[d] || 0;
+      return { date: d, sys: sysV, vid: vidV, drr: drrV, combined: sysV+vidV, deviation: deviationPct(drrV, sysV, vidV) };
+    });
+  }
+
+  // ---------- Filter dropdown population ----------
+  function populateFilterOptions(dataset){
+    const dates = getAllDates(dataset);
+    const dateSel = document.getElementById('filterDate');
+    dateSel.innerHTML = '<option value="ALL">All Dates</option>' +
+      dates.slice().reverse().map(d => `<option value="${d}">${shortDate(d)} (${d})</option>`).join('');
+
+    const cods = Array.from(new Set(Object.values(advToCodSpoc))).sort();
+    const codSel = document.getElementById('filterCodSpoc');
+    codSel.innerHTML = '<option value="ALL">All COD SPOCs</option>' +
+      cods.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    populateAdvertiserOptions();
+  }
+
+  function populateAdvertiserOptions(){
+    const advSel = document.getElementById('filterAdvertiser');
+    let names;
+    if (filters.codSpoc !== 'ALL') {
+      names = (codSpocToAdvertisers[filters.codSpoc] || []).slice().sort();
+    } else {
+      names = Object.keys(advToCodSpoc).sort();
+    }
+    const prevValue = filters.advertiser;
+    advSel.innerHTML = '<option value="ALL">All Advertisers</option>' +
+      names.map(n => `<option value="${n}">${n}</option>`).join('');
+    if (names.includes(prevValue)) {
+      advSel.value = prevValue;
+    } else {
+      filters.advertiser = 'ALL';
+      advSel.value = 'ALL';
+    }
+  }
+
+  // ---------- Top-level render ----------
+  function render(dataset, isLive){
+    lastDataset = dataset;
+    document.getElementById('modeStamp').textContent = isLive ? 'Live' : 'Sample Data';
+    expandedCodSpocs.clear();
+    expandedAdvertisers.clear();
+
+    advToCodSpoc = buildAdvToCodSpoc(dataset.drr.rows);
+    codSpocToAdvertisers = {};
+    Object.keys(advToCodSpoc).forEach(name => {
+      const cod = advToCodSpoc[name];
+      if (!codSpocToAdvertisers[cod]) codSpocToAdvertisers[cod] = [];
+      codSpocToAdvertisers[cod].push(name);
+    });
+
+    filters.date = 'ALL'; filters.codSpoc = 'ALL'; filters.advertiser = 'ALL';
+    populateFilterOptions(dataset);
+    document.getElementById('filterDate').value = 'ALL';
+    document.getElementById('filterCodSpoc').value = 'ALL';
+
+    applyFiltersAndRender();
+  }
+
+  function applyFiltersAndRender(){
+    if (!lastDataset) return;
+    const { dates, sys, vid, drr } = computeFilteredDaily(lastDataset);
+
+    renderSummary(dates, sys, vid, drr);
+    renderTrendChart(dates, sys, vid, drr);
+    renderDeviationChart(dates, sys, vid, drr);
+    renderDateTable(dates, sys, vid, drr);
+    renderAdvertiserTable(buildAdvertiserAggFiltered(lastDataset));
+    renderCodSpocTable(buildCodSpocAggFiltered(lastDataset));
+  }
+
+  function sparkline(values){
+    if (values.length < 2) return '';
+    const w = 240, h = 36, pad = 3;
+    const max = Math.max(...values), min = Math.min(...values);
+    const range = (max - min) || 1;
+    const pts = values.map((v, i) => {
+      const x = pad + (i / (values.length - 1 || 1)) * (w - pad*2);
+      const y = h - pad - ((v - min) / range) * (h - pad*2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>`;
+  }
+
+  // ---------- Summary: System / Video / DRR / Deviation, all on the SAME reference day ----------
+  function pickReferenceIndex(dates, sys, vid, drr){
+    if (dates.length === 0) return { index: -1, meetsThreshold: false };
+    if (filters.date !== 'ALL') return { index: 0, meetsThreshold: true, forced: true };
+    for (let i = dates.length - 1; i >= 0; i--){
+      if (drr[i] > TEN_LAKH) return { index: i, meetsThreshold: true };
+    }
+    return { index: dates.length - 1, meetsThreshold: false };
+  }
+
+  function renderSummary(dates, sys, vid, drr){
+    const grid = document.getElementById('summaryGrid');
+    const label = document.getElementById('summaryLabel');
+    const ref = pickReferenceIndex(dates, sys, vid, drr);
+
+    if (ref.index === -1) {
+      label.textContent = 'No Data For Current Filters';
+      grid.innerHTML = '<div class="empty-note" style="grid-column:1/-1;">No rows match the current filter selection.</div>';
+      return;
+    }
+
+    const refDate = dates[ref.index];
+    label.textContent = ref.forced
+      ? `Figures For ${shortDate(refDate)} (${refDate})`
+      : (ref.meetsThreshold
+          ? `Latest Day With DRR Above ₹10L — ${shortDate(refDate)} (${refDate})`
+          : `Latest Available Day — ${shortDate(refDate)} (${refDate}) · no day had DRR above ₹10L`);
+
+    const cards = [
+      { name: 'System Revenue', value: sys[ref.index], series: sys },
+      { name: 'Video Revenue', value: vid[ref.index], series: vid },
+      { name: 'DRR Revenue', value: drr[ref.index], series: drr }
+    ];
+
+    const devPct = deviationPct(drr[ref.index], sys[ref.index], vid[ref.index]);
+    const devSeries = dates.map((_, i) => deviationPct(drr[i], sys[i], vid[i]));
+
+    let html = cards.map(c => `<div class="card">
+      <div>
+        <div class="card-name">${c.name}</div>
+        <div class="card-tag">${dates.length} day(s) in view</div>
+      </div>
+      <div class="card-total">${fmt(c.value)}</div>
+      <div style="color:#536057">${sparkline(c.series.slice(-14))}</div>
+    </div>`).join('');
+
+    html += `<div class="card ${withinTolerance(devPct)?'':'is-debit'}">
+      <div>
+        <div class="card-name">Deviation</div>
+        <div class="card-tag">DRR vs Sys + Video</div>
+      </div>
+      <div class="card-total ${withinTolerance(devPct)?'':'is-debit'}" style="color:${withinTolerance(devPct)?'#2F6F4F':'#8B3A3A'}">${devPct>=0?'+':''}${devPct.toFixed(1)}%</div>
+      <div class="card-sub ${devClass(devPct)}">${withinTolerance(devPct) ? 'Within ±15% tolerance' : 'Outside ±15% tolerance'}</div>
+      <div style="color:${withinTolerance(devPct)?'#2F6F4F':'#8B3A3A'}">${sparkline(devSeries.slice(-14))}</div>
+    </div>`;
+
+    grid.innerHTML = html;
+  }
+
+  // ---------- Trend chart: interactive bars, Combined (Sys+Video) vs DRR, per day ----------
+  // DRR bar color reflects that day's tolerance status (green/red) so this chart
+  // doubles as a quick deviation scan, not just a revenue comparison.
+  function renderTrendChart(dates, sys, vid, drr){
+    const wrap = document.getElementById('trendChartWrap');
+    if (dates.length === 0) { wrap.innerHTML = '<div class="empty-note">No data for current filters.</div>'; return; }
+
+    const combined = dates.map((_,i) => sys[i] + vid[i]);
+    const dev = dates.map((_,i) => deviationPct(drr[i], sys[i], vid[i]));
+    const w = Math.max(560, dates.length * 30), h = 320;
+    const padL = 54, padR = 16, padT = 16, padB = 34;
+    const innerW = w - padL - padR, innerH = h - padT - padB;
+    const maxV = Math.max(...combined, ...drr, 1);
+    const groupW = innerW / dates.length;
+    const barW = Math.max(3, groupW * 0.32);
+    const gap = barW * 0.22;
+    const contentW = barW * 2 + gap;
+    const yFor = (v) => padT + innerH - (v / maxV) * innerH;
+    const barH = (v) => (v / maxV) * innerH;
+    const COMBINED_COLOR = '#3D6B84';
+
+    let gridSvg = '';
+    for (let i = 0; i <= 4; i++){
+      const v = maxV * i / 4;
+      const y = yFor(v);
+      gridSvg += `<line x1="${padL}" x2="${w-padR}" y1="${y}" y2="${y}" stroke="#C9C2AE" stroke-width="1" opacity="0.5"/>`;
+      gridSvg += `<text x="${padL-8}" y="${y+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#536057">${fmtShort(v)}</text>`;
+    }
+    const maxTicks = Math.max(4, Math.floor(innerW / 60));
+    const tickEvery = Math.max(1, Math.ceil(dates.length / maxTicks));
+    let xLabelsSvg = '';
+    let barsSvg = '', hitSvg = '';
+    dates.forEach((d, i) => {
+      const groupX = padL + i * groupW;
+      const startX = groupX + (groupW - contentW) / 2;
+      const combX = startX, drrX = startX + barW + gap;
+      const drrColor = withinTolerance(dev[i]) ? '#3E8161' : '#B5543F';
+      barsSvg += `<rect class="trend-bar" rx="2" data-idx="${i}" data-series="combined" x="${combX.toFixed(1)}" y="${yFor(combined[i]).toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(0.5,barH(combined[i])).toFixed(1)}" fill="${COMBINED_COLOR}"/>`;
+      barsSvg += `<rect class="trend-bar" rx="2" data-idx="${i}" data-series="drr" x="${drrX.toFixed(1)}" y="${yFor(drr[i]).toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(0.5,barH(drr[i])).toFixed(1)}" fill="${drrColor}"/>`;
+      hitSvg += `<rect class="trend-hit" data-idx="${i}" x="${groupX.toFixed(1)}" y="${padT}" width="${groupW.toFixed(1)}" height="${innerH}" fill="transparent"/>`;
+      if (i % tickEvery === 0) xLabelsSvg += `<text x="${(groupX+groupW/2).toFixed(1)}" y="${h-10}" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#536057">${shortDate(d)}</text>`;
+    });
+
+    wrap.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      ${gridSvg}
+      <rect id="trendHighlightBand" x="0" y="${padT}" width="0" height="${innerH}" fill="#A67C3D" opacity="0"/>
+      ${barsSvg}${hitSvg}${xLabelsSvg}
+    </svg>`;
+
+    const svgEl = wrap.querySelector('svg');
+    const band = svgEl.querySelector('#trendHighlightBand');
+
+    function onMove(e){
+      const hit = e.target.closest('[data-idx]');
+      if (!hit) { onLeave(); return; }
+      const idx = parseInt(hit.getAttribute('data-idx'), 10);
+      const groupX = padL + idx * groupW;
+      band.setAttribute('x', groupX.toFixed(1));
+      band.setAttribute('width', groupW.toFixed(1));
+      band.setAttribute('opacity', '0.09');
+      svgEl.querySelectorAll('.trend-bar').forEach(el => {
+        el.setAttribute('opacity', el.getAttribute('data-idx') === String(idx) ? '1' : '0.3');
+      });
+      showTooltip(e.clientX, e.clientY, `
+        <span class="tt-date">${longDate(dates[idx])}</span>
+        <div class="tt-row"><span>System</span><span>${fmt(sys[idx])}</span></div>
+        <div class="tt-row"><span>Video</span><span>${fmt(vid[idx])}</span></div>
+        <div class="tt-row tt-total"><span>Sys + Video</span><span>${fmt(combined[idx])}</span></div>
+        <div class="tt-row"><span>DRR</span><span>${fmt(drr[idx])}</span></div>
+        <div class="tt-row" style="color:${withinTolerance(dev[idx])?'#8FC9A8':'#E8A9A0'}"><span>Deviation</span><span>${dev[idx]>=0?'+':''}${dev[idx].toFixed(1)}%</span></div>
+      `);
+    }
+    function onLeave(){
+      hideTooltip();
+      band.setAttribute('opacity', '0');
+      svgEl.querySelectorAll('.trend-bar').forEach(el => el.setAttribute('opacity', '1'));
+    }
+    wrap.onmousemove = onMove;
+    wrap.onmouseleave = onLeave;
+  }
+
+  // ---------- Deviation chart: DRR vs (System+Video), colored by ±15% tolerance, interactive ----------
+  function renderDeviationChart(dates, sys, vid, drr){
+    const wrap = document.getElementById('deviationChartWrap');
+    if (dates.length === 0) {
+      wrap.innerHTML = '<div class="empty-note">No data for current filters.</div>';
+      document.getElementById('deviationStats').innerHTML = '';
+      return;
+    }
+    const pct = dates.map((_,i) => deviationPct(drr[i], sys[i], vid[i]));
+
+    const w = Math.max(560, dates.length * 26), h = 240;
+    const padL = 54, padR = 16, padT = 12, padB = 30;
+    const innerW = w - padL - padR, innerH = h - padT - padB;
+    const centerY = padT + innerH / 2;
+
+    const maxAbs = Math.max(...pct.map(v => Math.abs(v)), 20);
+    const colW = innerW / dates.length;
+    const xFor = (i) => padL + (i / ((dates.length - 1) || 1)) * innerW;
+    const barW = Math.max(3, colW * 0.55);
+
+    let barsSvg = '', hitSvg = '';
+    pct.forEach((v, i) => {
+      const clamped = Math.max(-maxAbs, Math.min(maxAbs, v));
+      const barH = (Math.abs(clamped) / maxAbs) * (innerH / 2);
+      const x = xFor(i) - barW/2;
+      const color = withinTolerance(v) ? '#3E8161' : '#B5543F';
+      const y = v >= 0 ? centerY - barH : centerY;
+      barsSvg += `<rect class="dev-bar" rx="1.5" data-idx="${i}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1,barH).toFixed(1)}" fill="${color}" opacity="0.85"/>`;
+      const hitX = xFor(i) - colW/2;
+      hitSvg += `<rect class="dev-hit" data-idx="${i}" x="${hitX.toFixed(1)}" y="${padT}" width="${colW.toFixed(1)}" height="${innerH}" fill="transparent"/>`;
+    });
+
+    // 7-day rolling average overlay — smooths out daily noise so a sustained
+    // drift toward one side is visible even while individual days bounce around
+    const rollWindow = 7;
+    const rollingAvg = pct.map((_, i) => {
+      const start = Math.max(0, i - rollWindow + 1);
+      const slice = pct.slice(start, i + 1);
+      return slice.reduce((a,b) => a+b, 0) / slice.length;
+    });
+    const yForPct = (v) => centerY - (Math.max(-maxAbs, Math.min(maxAbs, v)) / maxAbs) * (innerH / 2);
+    const avgPath = rollingAvg.map((v,i) => (i===0?'M':'L') + xFor(i).toFixed(1) + ',' + yForPct(v).toFixed(1)).join(' ');
+    const avgLineSvg = dates.length > 1
+      ? `<path d="${avgPath}" fill="none" stroke="#A67C3D" stroke-width="1.8" stroke-dasharray="4,3" stroke-linecap="round" opacity="0.85"/>`
+      : '';
+
+    const maxTicks = Math.max(4, Math.floor(innerW / 70));
+    const tickEvery = Math.max(1, Math.ceil(dates.length / maxTicks));
+    let xLabelsSvg = '';
+    dates.forEach((d,i) => { if (i % tickEvery === 0) xLabelsSvg += `<text x="${xFor(i)}" y="${h-8}" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#536057">${shortDate(d)}</text>`; });
+
+    const y15pos = centerY - (15/maxAbs)*(innerH/2);
+    const y15neg = centerY + (15/maxAbs)*(innerH/2);
+    const toleranceBand = `<rect x="${padL}" y="${y15pos.toFixed(1)}" width="${innerW}" height="${(y15neg-y15pos).toFixed(1)}" fill="#2F6F4F" opacity="0.06"/>
+      <line x1="${padL}" x2="${w-padR}" y1="${y15pos.toFixed(1)}" y2="${y15pos.toFixed(1)}" stroke="#2F6F4F" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+      <line x1="${padL}" x2="${w-padR}" y1="${y15neg.toFixed(1)}" y2="${y15neg.toFixed(1)}" stroke="#2F6F4F" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>`;
+
+    const zeroLine = `<line x1="${padL}" x2="${w-padR}" y1="${centerY}" y2="${centerY}" stroke="#1E2A25" stroke-width="1"/>`;
+    const axisLabels = `<text x="${padL-8}" y="${padT+8}" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#536057">+${maxAbs.toFixed(0)}%</text>
+      <text x="${padL-8}" y="${centerY+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#536057">0%</text>
+      <text x="${padL-8}" y="${h-padB}" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#536057">-${maxAbs.toFixed(0)}%</text>`;
+
+    wrap.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      ${axisLabels}${toleranceBand}
+      <rect id="devHighlightBand" x="0" y="${padT}" width="0" height="${innerH}" fill="#A67C3D" opacity="0"/>
+      ${zeroLine}${barsSvg}${avgLineSvg}${hitSvg}${xLabelsSvg}
+    </svg>`;
+
+    const svgEl = wrap.querySelector('svg');
+    const band = svgEl.querySelector('#devHighlightBand');
+
+    function onMove(e){
+      const hit = e.target.closest('[data-idx]');
+      if (!hit) { onLeave(); return; }
+      const idx = parseInt(hit.getAttribute('data-idx'), 10);
+      const bandX = xFor(idx) - colW/2;
+      band.setAttribute('x', bandX.toFixed(1));
+      band.setAttribute('width', colW.toFixed(1));
+      band.setAttribute('opacity', '0.09');
+      svgEl.querySelectorAll('.dev-bar').forEach(el => {
+        el.setAttribute('opacity', el.getAttribute('data-idx') === String(idx) ? '1' : '0.35');
+      });
+      const v = pct[idx];
+      const combined = sys[idx] + vid[idx];
+      const statusText = withinTolerance(v) ? 'Within ±15% tolerance' : 'Outside ±15% tolerance';
+      showTooltip(e.clientX, e.clientY, `
+        <span class="tt-date">${longDate(dates[idx])}</span>
+        <div class="tt-row"><span>DRR</span><span>${fmt(drr[idx])}</span></div>
+        <div class="tt-row"><span>Sys + Video</span><span>${fmt(combined)}</span></div>
+        <div class="tt-row tt-total" style="color:${withinTolerance(v)?'#8FC9A8':'#E8A9A0'}"><span>Deviation</span><span>${v>=0?'+':''}${v.toFixed(1)}%</span></div>
+        <div class="tt-row" style="color:#C9A876;"><span>7-day avg</span><span>${rollingAvg[idx]>=0?'+':''}${rollingAvg[idx].toFixed(1)}%</span></div>
+        <div style="margin-top:3px; font-size:10px; color:#B9C4BC;">${statusText}</div>
+      `);
+    }
+    function onLeave(){
+      hideTooltip();
+      band.setAttribute('opacity', '0');
+      svgEl.querySelectorAll('.dev-bar').forEach(el => el.setAttribute('opacity', '0.85'));
+    }
+    wrap.onmousemove = onMove;
+    wrap.onmouseleave = onLeave;
+
+    const avg = pct.reduce((a,b)=>a+b,0) / (pct.length || 1);
+    const withinCount = pct.filter(withinTolerance).length;
+    const outsideCount = pct.length - withinCount;
+    let worstIdx = 0;
+    pct.forEach((v,i) => { if (Math.abs(v) > Math.abs(pct[worstIdx])) worstIdx = i; });
+
+    document.getElementById('deviationStats').innerHTML = `
+      <div class="stat-chip ${withinTolerance(avg)?'good':'bad'}">Avg deviation: <b>${avg>=0?'+':''}${avg.toFixed(1)}%</b></div>
+      <div class="stat-chip good">Within ±15%: <b>${withinCount} day(s)</b></div>
+      <div class="stat-chip bad">Outside ±15%: <b>${outsideCount} day(s)</b></div>
+      <div class="stat-chip ${withinTolerance(pct[worstIdx])?'good':'bad'}">Worst day: <b>${shortDate(dates[worstIdx])} (${pct[worstIdx]>=0?'+':''}${pct[worstIdx].toFixed(1)}%)</b></div>
+    `;
+  }
+
+  // ---------- Date level table ----------
+  function renderDateTable(dates, sys, vid, drr){
+    const body = document.getElementById('dateTableBody');
+    if (dates.length === 0) { body.innerHTML = '<tr><td colspan="6" class="empty-note">No data for current filters.</td></tr>'; }
+    else {
+      body.innerHTML = dates.map((d, i) => {
+        const combined = sys[i] + vid[i];
+        const pct = deviationPct(drr[i], sys[i], vid[i]);
+        const label = new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'2-digit', weekday:'short' });
+        return `<tr class="${withinTolerance(pct)?'':'bad-row'}"><td>${label}</td><td>${fmt(sys[i])}</td><td>${fmt(vid[i])}</td><td>${fmt(combined)}</td><td>${fmt(drr[i])}</td><td>${devCell(pct)}</td></tr>`;
+      }).join('');
+    }
+    const sysT = sys.reduce((a,b)=>a+b,0), vidT = vid.reduce((a,b)=>a+b,0), drrT = drr.reduce((a,b)=>a+b,0);
+    document.getElementById('dtSystem').textContent = fmt(sysT);
+    document.getElementById('dtVideo').textContent = fmt(vidT);
+    document.getElementById('dtCombined').textContent = fmt(sysT+vidT);
+    document.getElementById('dtDrr').textContent = fmt(drrT);
+    document.getElementById('dtDev').innerHTML = devCell(deviationPct(drrT, sysT, vidT));
+  }
+
+  function renderAdvertiserTable(rows){
+    const body = document.getElementById('advertiserTableBody');
+    const label = document.getElementById('advertiserLabel');
+    const footnote = document.getElementById('advertiserFootnote');
+
+    if (filters.date !== 'ALL') {
+      label.textContent = `Advertiser Level — Ranked By |Deviation| For ${shortDate(filters.date)} (${filters.date})`;
+      footnote.innerHTML = `Mapped via DRR's <code>Advertiser Name (Ad Manager)</code> ↔ System/Video's <code>advertiser_name</code>. Showing only ${filters.date}, ranked by the biggest reconciliation gaps for that day. The top 3 are highlighted.`;
+    } else {
+      label.textContent = 'Advertiser Level — Ranked By |Deviation| (Full Period In View)';
+      footnote.innerHTML = `Mapped via DRR's <code>Advertiser Name (Ad Manager)</code> ↔ System/Video's <code>advertiser_name</code>. Ranked by the biggest reconciliation gaps across the whole period in view — pick a single date above to rank that day specifically. The top 3 are highlighted.`;
+    }
+
+    if (rows.length === 0) { body.innerHTML = '<tr><td colspan="8" class="empty-note">No advertisers match the current filters.</td></tr>'; }
+    else {
+      body.innerHTML = rows.map((r, i) => `<tr class="${i<3?'top-rank':''}">
+        <td><span class="rank-badge">${i+1}</span></td>
+        <td>${r.name}</td>
+        <td>${r.codSpoc}</td>
+        <td>${fmt(r.sys)}</td>
+        <td>${fmt(r.vid)}</td>
+        <td>${fmt(r.combined)}</td>
+        <td>${fmt(r.drr)}</td>
+        <td>${devCell(r.deviation)}</td>
+      </tr>`).join('');
+    }
+    const sysT = rows.reduce((a,r)=>a+r.sys,0), vidT = rows.reduce((a,r)=>a+r.vid,0), drrT = rows.reduce((a,r)=>a+r.drr,0);
+    document.getElementById('atSystem').textContent = fmt(sysT);
+    document.getElementById('atVideo').textContent = fmt(vidT);
+    document.getElementById('atCombined').textContent = fmt(sysT+vidT);
+    document.getElementById('atDrr').textContent = fmt(drrT);
+    document.getElementById('atDev').innerHTML = devCell(deviationPct(drrT, sysT, vidT));
+  }
+
+  function renderCodSpocTable(rows){
+    const body = document.getElementById('codSpocTableBody');
+    const label = document.getElementById('codSpocLabel');
+    const footnote = document.getElementById('codSpocFootnote');
+
+    if (filters.date !== 'ALL') {
+      label.textContent = `COD SPOC Level — Ranked By |Deviation| For ${shortDate(filters.date)} (${filters.date})`;
+      footnote.innerHTML = `Grouped by DRR's <code>COD SPOC</code> column. Showing only ${filters.date}. Click a row to see its advertisers, then click an advertiser to see its day-by-day figures. The top 3 are highlighted.`;
+    } else {
+      label.textContent = 'COD SPOC Level — Ranked By |Deviation| (Full Period In View)';
+      footnote.innerHTML = `Grouped by DRR's <code>COD SPOC</code> column. Click a row to see its advertisers, then click an advertiser to see its day-by-day figures. The top 3 are highlighted.`;
+    }
+
+    if (rows.length === 0) {
+      body.innerHTML = '<tr><td colspan="7" class="empty-note">No COD SPOCs match the current filters.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = rows.map((r, i) => buildCodSpocRowHtml(r, i)).join('');
+
+    const sysT = rows.reduce((a,r)=>a+r.sys,0), vidT = rows.reduce((a,r)=>a+r.vid,0), drrT = rows.reduce((a,r)=>a+r.drr,0);
+    document.getElementById('ctSystem').textContent = fmt(sysT);
+    document.getElementById('ctVideo').textContent = fmt(vidT);
+    document.getElementById('ctCombined').textContent = fmt(sysT+vidT);
+    document.getElementById('ctDrr').textContent = fmt(drrT);
+    document.getElementById('ctDev').innerHTML = devCell(deviationPct(drrT, sysT, vidT));
+
+    body.onclick = (e) => {
+      const row = e.target.closest('tr.expandable');
+      if (!row) return;
+      const type = row.getAttribute('data-type');
+      const key = row.getAttribute('data-key');
+      if (type === 'codspoc') {
+        expandedCodSpocs.has(key) ? expandedCodSpocs.delete(key) : expandedCodSpocs.add(key);
+      } else if (type === 'advertiser') {
+        expandedAdvertisers.has(key) ? expandedAdvertisers.delete(key) : expandedAdvertisers.add(key);
+      }
+      renderCodSpocTable(buildCodSpocAggFiltered(lastDataset));
+    };
+  }
+
+  function buildCodSpocRowHtml(r, i){
+    const key = r.cod;
+    const isOpen = expandedCodSpocs.has(key);
+    let html = `<tr class="${i<3?'top-rank ':''}expandable" data-type="codspoc" data-key="${esc(key)}">
+      <td><span class="rank-badge">${i+1}</span></td>
+      <td><span class="expand-icon">${isOpen?'▾':'▸'}</span>${esc(r.cod)}</td>
+      <td>${fmt(r.sys)}</td><td>${fmt(r.vid)}</td><td>${fmt(r.combined)}</td><td>${fmt(r.drr)}</td><td>${devCell(r.deviation)}</td>
+    </tr>`;
+    if (isOpen) {
+      const advRows = getAdvertisersForCodSpoc(lastDataset, key);
+      if (advRows.length === 0) {
+        html += `<tr class="sub-row"><td></td><td colspan="6" class="empty-note">No advertisers found under current filters.</td></tr>`;
+      } else {
+        advRows.forEach(a => { html += buildAdvertiserRowHtml(a, key); });
+      }
+    }
+    return html;
+  }
+
+  function buildAdvertiserRowHtml(a, codSpocKey){
+    const advKey = codSpocKey + '||' + a.name;
+    const isOpen = expandedAdvertisers.has(advKey);
+    let html = `<tr class="sub-row adv-row expandable" data-type="advertiser" data-key="${esc(advKey)}">
+      <td></td>
+      <td class="indent-1"><span class="expand-icon">${isOpen?'▾':'▸'}</span>${esc(a.name)}</td>
+      <td>${fmt(a.sys)}</td><td>${fmt(a.vid)}</td><td>${fmt(a.combined)}</td><td>${fmt(a.drr)}</td><td>${devCell(a.deviation)}</td>
+    </tr>`;
+    if (isOpen) {
+      const dateRows = getDatesForAdvertiser(lastDataset, a.name);
+      if (dateRows.length === 0) {
+        html += `<tr class="sub-row date-row"><td></td><td colspan="6" class="empty-note">No date-level data for current filters.</td></tr>`;
+      } else {
+        dateRows.forEach(d => {
+          html += `<tr class="sub-row date-row">
+            <td></td>
+            <td class="indent-2">${shortDate(d.date)} <span class="neu">(${d.date})</span></td>
+            <td>${fmt(d.sys)}</td><td>${fmt(d.vid)}</td><td>${fmt(d.combined)}</td><td>${fmt(d.drr)}</td><td>${devCell(d.deviation)}</td>
+          </tr>`;
+        });
+      }
+    }
+    return html;
+  }
+
+  function setStatus(msg, kind){
+    const el = document.getElementById('statusLine');
+    el.textContent = msg;
+    el.className = 'status-line' + (kind ? ' ' + kind : '');
+  }
+
+  document.getElementById('demoBtn').addEventListener('click', () => {
+    render(generateSampleDataset(), false);
+    setStatus('Showing sample data. Paste your Web App URL above and click Connect for live figures.');
+  });
+
+  document.getElementById('connectBtn').addEventListener('click', async () => {
+    const url = document.getElementById('webAppUrl').value.trim();
+    if (!url){ setStatus('Enter your Apps Script Web App URL first.', 'error'); return; }
+    setStatus('Connecting…');
+    try {
+      const dataset = await loadLive(url);
+      render(dataset, true);
+      setStatus('Connected — showing live data from your spreadsheets.', 'ok');
+    } catch (err){
+      setStatus('Could not load live data: ' + err.message, 'error');
+    }
+  });
+
+  document.getElementById('filterDate').addEventListener('change', (e) => { filters.date = e.target.value; applyFiltersAndRender(); });
+  document.getElementById('filterCodSpoc').addEventListener('change', (e) => { filters.codSpoc = e.target.value; populateAdvertiserOptions(); applyFiltersAndRender(); });
+  document.getElementById('filterAdvertiser').addEventListener('change', (e) => { filters.advertiser = e.target.value; applyFiltersAndRender(); });
+  document.getElementById('resetFiltersBtn').addEventListener('click', () => {
+    filters.date = 'ALL'; filters.codSpoc = 'ALL'; filters.advertiser = 'ALL';
+    document.getElementById('filterDate').value = 'ALL';
+    document.getElementById('filterCodSpoc').value = 'ALL';
+    populateAdvertiserOptions();
+    applyFiltersAndRender();
+  });
+
+  render(generateSampleDataset(), false);
+})();
+</script>
+</body>
+</html>
